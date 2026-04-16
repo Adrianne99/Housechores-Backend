@@ -4,6 +4,7 @@ import {
   seed_products,
   get_products,
   create_product,
+  update_products,
 } from "../controllers/product_controller.js";
 
 const product_router = express.Router();
@@ -18,5 +19,7 @@ product_router.post(
   require_admin,
   create_product,
 );
+
+product_router.patch("/:id/stock", user_auth, require_admin, update_products);
 
 export default product_router;

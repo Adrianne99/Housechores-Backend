@@ -526,3 +526,26 @@ export const get_products = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const update_products = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { current_stock } = req.body;
+
+    const product = await product_model.findByIdAndUpdate(
+      id,
+      { "stock_management.current_stock": current_stock },
+      { new: true },
+    );
+
+    if (!product) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
+    }
+
+    return res.status(200).json({ success: true, product });
+  } catch (error) {
+    return res.status(500).jsom({ success: false, message: error.message });
+  }
+};

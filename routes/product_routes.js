@@ -5,6 +5,11 @@ import {
   get_products,
   create_product,
   update_products,
+  update_barcode,
+  update_category,
+  update_stock_management,
+  update_name,
+  update_price,
 } from "../controllers/product_controller.js";
 
 const product_router = express.Router();
@@ -20,6 +25,23 @@ product_router.post(
   create_product,
 );
 
-product_router.patch("/:id/stock", user_auth, require_admin, update_products);
+product_router.patch("/:id/name", user_auth, require_admin, update_name);
+
+product_router.patch(
+  "/:id/stock",
+  user_auth,
+  require_admin,
+  update_stock_management,
+);
+
+product_router.patch("/:id/barcode", user_auth, require_admin, update_barcode);
+product_router.patch(
+  "/:id/category",
+  user_auth,
+  require_admin,
+  update_category,
+);
+
+product_router.patch("/:id/price", user_auth, require_admin, update_price);
 
 export default product_router;

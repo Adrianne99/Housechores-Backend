@@ -527,25 +527,206 @@ export const get_products = async (req, res) => {
   }
 };
 
-export const update_products = async (req, res) => {
+export const update_name = async (req, res) => {
+  console.log("Body:", req.body);
+  console.log("Name type:", typeof req.body.name);
+  console.log("Brand type:", typeof req.body.brand);
   try {
     const { id } = req.params;
-    const { current_stock } = req.body;
+    const { name, brand } = req.body;
+
+    if (!name || !brand)
+      return res.status(400).json({
+        success: false,
+        messsge: "Name and Brand is required.",
+      });
 
     const product = await product_model.findByIdAndUpdate(
       id,
-      { "stock_management.current_stock": current_stock },
-      { new: true },
+      {
+        $set: {
+          name,
+          brand,
+        },
+      },
+      { new: true, runValidators: true },
     );
 
-    if (!product) {
+    if (!product)
       return res
         .status(404)
         .json({ success: false, message: "Product not found." });
-    }
 
     return res.status(200).json({ success: true, product });
   } catch (error) {
-    return res.status(500).jsom({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const update_stock_management = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { current_stock, reorder_level, supplier } = req.body;
+
+    if (current_stock === undefined || reorder_level === undefined)
+      return res.status(400).json({
+        success: false,
+        message: "current_stock and reorder_level are required.",
+      });
+
+    const product = await product_model.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "stock_management.current_stock": Number(current_stock),
+          "stock_management.reorder_level": Number(reorder_level),
+          "stock_management.supplier": supplier ?? "",
+        },
+      },
+      { new: true },
+    );
+
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
+
+    return res.status(200).json({ success: true, product });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const update_products = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { barcode, name, brand, category, unit, stock_management, pricing } =
+      req.body;
+
+    if (
+      !barcode ||
+      !name ||
+      !brand ||
+      !category ||
+      !unit ||
+      !stock_management ||
+      !pricing
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields are required." });
+    }
+
+    const product = await product_model.findByIdAndUpdate(
+      id,
+      { $set: req.body },
+      { new: true, runValidators: true },
+    );
+
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
+    return res.status(200).json({ success: true, product });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const update_barcode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { barcode } = req.body;
+
+    if (!barcode) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Barcode Required." });
+    }
+
+    const existing_barcode = await product_model.findOne({ barcode });
+    if (existing_barcode && existing_barcode._id.toString() !== id) {
+      return res
+        .status(409)
+        .json({ success: false, messsage: "Barcode already in use." });
+    }
+
+    const product_barcode = await product_model.findByIdAndUpdate(
+      id,
+      { $set: { barcode } },
+      { new: true, runValidators: true },
+    );
+
+    if (!product_barcode)
+      return res
+        .status(404)
+        .json({ success: false, message: "Barcode not found." });
+
+    return res.status(200).json({ success: true, product_barcode });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const update_category = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category } = req.body;
+
+    if (!category)
+      return res
+        .status(400)
+        .json({ success: false, message: "Category is Required." });
+
+    const product = await product_model.findByIdAndUpdate(
+      id,
+      {
+        $set: { category },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not Found." });
+
+    return res.status(200).json({ success: true, product });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const update_price = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cost_per_unit, price, markup_value } = req.body;
+
+    if (!price || !markup_value || !cost_per_unit)
+      return res.status(404).json({
+        success: false,
+        message: "All field is required.",
+      });
+
+    const product = await product_model.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "pricing.cost_per_unit": Number(cost_per_unit),
+          "pricing.markup_value": Number(markup_value),
+          "pricing.selling_price": Number(price),
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!product)
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
+
+    return res.status(200).json({ success: true, product });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -10,6 +10,8 @@ import {
   update_stock_management,
   update_name,
   update_price,
+  update_supplier,
+  delete_product,
 } from "../controllers/product_controller.js";
 
 const product_router = express.Router();
@@ -43,5 +45,14 @@ product_router.patch(
 );
 
 product_router.patch("/:id/price", user_auth, require_admin, update_price);
+
+product_router.patch(
+  "/:id/supplier",
+  user_auth,
+  require_admin,
+  update_supplier,
+);
+
+product_router.delete("/:id", user_auth, require_admin, delete_product);
 
 export default product_router;

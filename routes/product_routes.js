@@ -12,6 +12,8 @@ import {
   update_price,
   update_supplier,
   delete_product,
+  delete_all,
+  delete_bulk,
 } from "../controllers/product_controller.js";
 
 const product_router = express.Router();
@@ -53,6 +55,8 @@ product_router.patch(
   update_supplier,
 );
 
+product_router.delete("/bulk", user_auth, require_admin, delete_bulk);
+product_router.delete("/all", user_auth, require_admin, delete_all);
 product_router.delete("/:id", user_auth, require_admin, delete_product);
 
 export default product_router;

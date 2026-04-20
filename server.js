@@ -6,6 +6,7 @@ import connectDb from "./config/mongodb.js";
 import auth_router from "./routes/auth_routes.js";
 import user_router from "./routes/user_routes.js";
 import product_router from "./routes/product_routes.js";
+import branch_router from "./routes/branch_routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -21,6 +22,7 @@ app.get("/", (req, res) => {
   res.send("Server is running");
 });
 
+app.use("/api/branches", branch_router);
 app.use("/api/auth", auth_router);
 app.use("/api/user", user_router);
 app.use("/api/products", product_router);

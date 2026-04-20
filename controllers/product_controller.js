@@ -700,9 +700,9 @@ export const update_category = async (req, res) => {
 export const update_price = async (req, res) => {
   try {
     const { id } = req.params;
-    const { cost_per_unit, price, markup_value } = req.body;
+    const { cost_per_unit, selling_price, markup_value } = req.body;
 
-    if (!price || !markup_value || !cost_per_unit)
+    if (!selling_price || !markup_value || !cost_per_unit)
       return res.status(404).json({
         success: false,
         message: "All field is required.",
@@ -712,9 +712,9 @@ export const update_price = async (req, res) => {
       id,
       {
         $set: {
-          "pricing.cost_per_unit": Number(cost_per_unit),
           "pricing.markup_value": Number(markup_value),
-          "pricing.selling_price": Number(price),
+          "pricing.selling_price": Number(selling_price),
+          "pricing.cost_per_unit": Number(cost_per_unit),
         },
       },
       { new: true, runValidators: true },
@@ -776,6 +776,36 @@ export const delete_product = async (req, res) => {
       .json({ success: true, message: "Product deleted succesfully." });
   } catch (error) {
     console.log("Delete error:", error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const delete_bulk = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids?.length)
+      return res
+        .status(400)
+        .json({ success: false, message: "No IDs Provided" });
+
+    await product_model.deleteMany({ _id: { $in: ids } });
+
+    return res
+      .status(200)
+      .json({ success: true, message: `${ids.length} products deleted.` });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.messsage });
+  }
+};
+
+export const delete_all = async (req, res) => {
+  try {
+    await product_model.deleteMany({});
+    return res
+      .status(200)
+      .json({ success: true, message: "All products deleted." });
+  } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };

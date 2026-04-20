@@ -31,7 +31,6 @@ export const user_auth = async (req, res, next) => {
 };
 
 export const require_admin = (req, res, next) => {
-  // ✅ Fix 2: was `req.user_role`, should be `req.user.role`
   if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({
       success: false,
@@ -42,7 +41,6 @@ export const require_admin = (req, res, next) => {
 };
 
 export const require_employee = (req, res, next) => {
-  // ✅ Fix 2 (same): was `req.user_role`, should be `req.user.role`
   if (!req.user || req.user.role !== "employee") {
     return res.status(403).json({
       success: false,

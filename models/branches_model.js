@@ -1,6 +1,6 @@
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 
-const branch_schema = mongoose.Schema(
+const branch_schema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     address: { type: String, default: "" },

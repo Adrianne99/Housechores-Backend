@@ -7,6 +7,8 @@ import auth_router from "./routes/auth_routes.js";
 import user_router from "./routes/user_routes.js";
 import product_router from "./routes/product_routes.js";
 import branch_router from "./routes/branch_routes.js";
+import schedule_router from "./routes/schedule_routes.js";
+import timelogs_router from "./routes/timelog_routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,6 +28,8 @@ app.use("/api/branches", branch_router);
 app.use("/api/auth", auth_router);
 app.use("/api/user", user_router);
 app.use("/api/products", product_router);
+app.use("/api/schedule", schedule_router);
+app.use("/api/timelog", timelogs_router);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

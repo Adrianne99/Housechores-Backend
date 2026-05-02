@@ -5,6 +5,11 @@ const branch_schema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     address: { type: String, default: "" },
     is_active: { type: Boolean, default: true },
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      default: null,
+    },
   },
   { timestamps: true },
 );

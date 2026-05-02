@@ -15,12 +15,26 @@ export const get_branch = async (req, res) => {
 
 export const get_single_branch = async (req, res) => {
   try {
-    const branch = await branch_model.findById(req.params.id);
+    const { role, branch } = req.user;
 
-    if (!branch)
+    if (
+      ["branch_manager", "employee"].includes(role) &&
+      branch._id.toString() !== req.params.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You can only view your assigned branch.",
+      });
+    }
+
+    const found_branch = await branch_model.findById(req.params.id);
+
+    if (!found_branch) {
       return res
         .status(404)
         .json({ success: false, message: "Branch not found." });
+    }
+
     return res.status(200).json({ success: true, branch });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -35,7 +49,20 @@ export const create_branch = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Branch name is required." });
 
-    const branch = new branch_model({ name, address });
+    const branch_already_exist = await branch_model.findOne({
+      name: name.trim(),
+    });
+
+    if (branch_already_exist)
+      return res
+        .status(409)
+        .json({ success: false, message: "Branch name already exist." });
+
+    const branch = new branch_model({
+      name,
+      address,
+      created_by: req.user._id,
+    });
     await branch.save();
 
     return res.status(201).json({ success: true, branch }); //201 = Created
@@ -95,5 +122,53 @@ export const delete_branch = async (req, res) => {
     return res.status(200).json({ success: true, message: "Branch deleted." });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const assign_branch = async (req, res) => {
+  try {
+    const { user_id, branch_id } = req.body;
+
+    const user = await user_model.findById(user_id);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    if (["owner"].includes(user.role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Owner account cannot be assigned to a branch.",
+      });
+    }
+
+    const branch = await branch_model.findById(branch_id);
+    if (!branch) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Branch not found." });
+    }
+
+    user.branch = branch_id;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `${user.name} assigned to ${branch.name}.`,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const get_all_branches = async (req, res) => {
+  try {
+    const branches = await branch_model
+      .find()
+      .populate("created_by", "name email role");
+    res.status(200).json({ success: true, branches });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

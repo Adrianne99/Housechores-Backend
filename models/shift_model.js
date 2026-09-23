@@ -12,6 +12,12 @@ const shift_schema = new mongoose.Schema(
       ref: "branches",
       required: true,
     },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: true,
+      index: true,
+    },
     date: { type: String, required: true },
     start_time: { type: String, required: true },
     end_time: { type: String, required: true },

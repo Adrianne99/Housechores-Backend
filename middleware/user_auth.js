@@ -22,6 +22,10 @@ export const user_auth = async (req, res, next) => {
     }
 
     req.user = user;
+    // The organization (tenant) every query in this request is scoped to.
+    // Root admins own their org (organization === own _id); for legacy data
+    // that predates multi-tenancy we fall back to the user's own _id.
+    req.org = user.organization || user._id;
     next();
   } catch (error) {
     return res
@@ -66,12 +70,16 @@ export const require_employee = (req, res, next) => {
 export const inject_branch_filter = (req, res, next) => {
   const { role, branch } = req.user;
 
+  // Every filter is scoped to the caller's organization first.
   if (["admin"].includes(role)) {
     req.branch_filter = req.query.branch_id
-      ? { branch: req.query.branch_id }
-      : {};
+      ? { organization: req.org, branch: req.query.branch_id }
+      : { organization: req.org };
   } else if (branch) {
-    req.branch_filter = { branch: branch._id };
+    req.branch_filter = {
+      organization: req.org,
+      branch: branch._id ?? branch,
+    };
   } else {
     return res.status(403).json({
       success: false,

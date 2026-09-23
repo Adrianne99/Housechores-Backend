@@ -37,12 +37,17 @@ product_router.get(
 product_router.post(
   "/create-product",
   user_auth,
-  require_admin,
+  require_branch_manager,
   create_product,
 );
 
 // Branch manager and above — prices, stock, supplier, barcode
-product_router.patch("/:id/name", user_auth, require_admin, update_name);
+product_router.patch(
+  "/:id/name",
+  user_auth,
+  require_branch_manager,
+  update_name,
+);
 product_router.patch(
   "/:id/barcode",
   user_auth,
@@ -58,7 +63,7 @@ product_router.patch(
 product_router.patch(
   "/:id/category",
   user_auth,
-  require_admin,
+  require_branch_manager,
   update_category,
 );
 product_router.patch(

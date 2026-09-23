@@ -13,6 +13,12 @@ const timelog_schema = new mongoose.Schema(
       ref: "branches",
       required: true,
     },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: true,
+      index: true,
+    },
     clock_in: { type: Date, default: null },
     clock_out: { type: Date, default: null },
     hours_worked: { type: Number, default: 0 },

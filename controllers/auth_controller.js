@@ -3,10 +3,21 @@ import jwt from "jsonwebtoken";
 import user_model from "../models/user_model.js";
 import transporter from "../config/nodemailer.js";
 
+// ─── Helper ──────────────────────────────────────────────────
+// Returns the safe public shape of a user — used everywhere
+// userData is sent to the frontend so all 3 endpoints stay in sync.
+const to_user_data = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  branch: user.branch, // ⬅️ NEW: include branch so frontend can show it
+  is_account_verified: user.is_account_verified,
+});
+
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
 
-  // ✅ Validate input
   if (!name || !email || !password) {
     return res
       .status(400)
@@ -37,6 +48,10 @@ export const register = async (req, res) => {
       role: "admin",
     });
 
+    // A fresh registration starts a brand-new organization (tenant).
+    // The admin owns it, so organization points at their own _id.
+    newUser.organization = newUser._id;
+
     await newUser.save();
 
     const mailOptions = {
@@ -52,13 +67,7 @@ export const register = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      userData: {
-        _id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        is_account_verified: newUser.is_account_verified,
-      },
+      userData: to_user_data(newUser),
       message: "Registration successful.",
     });
   } catch (error) {
@@ -78,7 +87,12 @@ export const login = async (req, res) => {
       .json({ success: false, message: "Email and password are required." });
 
   try {
-    const user = await user_model.findOne({ email });
+    // ⬇️ CHANGED: populate branch so userData.branch is { _id, name, address }
+    // instead of just an ObjectId — frontend can show the branch name directly.
+    const user = await user_model
+      .findOne({ email })
+      .populate("branch", "name address");
+
     if (!user)
       return res
         .status(401)
@@ -90,7 +104,6 @@ export const login = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Invalid credentials." });
 
-    // ✅ Include id and role in token
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -106,13 +119,7 @@ export const login = async (req, res) => {
 
     return res.json({
       success: true,
-      userData: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        is_account_verified: user.is_account_verified,
-      },
+      userData: to_user_data(user),
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -126,7 +133,6 @@ export const logout = async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
     });
-
     return res.json({ success: true, message: "Logged out successfully" });
   } catch (error) {
     return res.json({ success: false, message: error.message });
@@ -136,9 +142,7 @@ export const logout = async (req, res) => {
 export const send_verification_otp = async (req, res) => {
   try {
     const user_id = req.user_id;
-
     const user = await user_model.findById(user_id);
-    console.log(user);
 
     if (!user) {
       return res.json({ success: false, message: "User not found" });
@@ -150,8 +154,7 @@ export const send_verification_otp = async (req, res) => {
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     user.verify_otp = otp;
-    user.verify_otp_expiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-
+    user.verify_otp_expiry = Date.now() + 24 * 60 * 60 * 1000;
     await user.save();
 
     const mail_option = {
@@ -162,7 +165,6 @@ export const send_verification_otp = async (req, res) => {
     };
 
     await transporter.sendMail(mail_option);
-
     return res.json({
       success: true,
       message: "OTP sent to your email address",
@@ -174,12 +176,10 @@ export const send_verification_otp = async (req, res) => {
 
 export const verify_account = async (req, res) => {
   const { otp } = req.body;
-
   const user_id = req.user_id;
 
   try {
     const user_data = await user_model.findById(user_id);
-    console.log(user_data);
 
     if (!user_data) {
       return res.json({ success: false, message: "User not Found" });
@@ -207,9 +207,28 @@ export const verify_account = async (req, res) => {
   }
 };
 
+// ⬇️ CHANGED: This is the BIG one.
+// Before: returned only { success: true }, so the frontend's authLoader
+// got userData = undefined on every page refresh. That's why BranchLabel
+// kept rendering null — userData.branch was unreadable.
+//
+// Now: re-fetches the user with branch populated and returns full userData.
 export const is_authenticated = async (req, res) => {
   try {
-    return res.json({ success: true });
+    const user = await user_model
+      .findById(req.user._id)
+      .populate("branch", "name address");
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ success: false, message: "User not found" });
+    }
+
+    return res.json({
+      success: true,
+      userData: to_user_data(user),
+    });
   } catch (error) {
     return res.json({ success: false, message: error.message });
   }
@@ -217,22 +236,19 @@ export const is_authenticated = async (req, res) => {
 
 export const send_reset_otp = async (req, res) => {
   const { email } = req.body;
-
   if (!email) {
     return res.json({ success: false, message: "Email is required" });
   }
 
   try {
     const user = await user_model.findOne({ email });
-
     if (!user) {
       return res.json({ success: false, message: "User not found" });
     }
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     user.reset_otp = otp;
-    user.reset_otp_expiry = Date.now() + 15 * 60 * 1000; // 15 minutes
-
+    user.reset_otp_expiry = Date.now() + 15 * 60 * 1000;
     await user.save();
 
     const mail_option = {
@@ -243,7 +259,6 @@ export const send_reset_otp = async (req, res) => {
     };
 
     await transporter.sendMail(mail_option);
-
     return res.json({
       success: true,
       message: "Password reset OTP sent to your email address",
@@ -255,14 +270,12 @@ export const send_reset_otp = async (req, res) => {
 
 export const verify_reset_otp = async (req, res) => {
   const { otp } = req.body;
-
   if (!otp) {
     return res.json({ success: false, message: "OTP is required" });
   }
 
   try {
     const user = await user_model.findOne({ reset_otp: otp });
-
     if (!user) {
       return res.json({ success: false, message: "Invalid OTP" });
     }
@@ -271,10 +284,7 @@ export const verify_reset_otp = async (req, res) => {
       return res.json({ success: false, message: "OTP expired" });
     }
 
-    return res.json({
-      success: true,
-      message: "OTP verified",
-    });
+    return res.json({ success: true, message: "OTP verified" });
   } catch (error) {
     return res.json({ success: false, message: error.message });
   }
@@ -309,7 +319,6 @@ export const reset_password = async (req, res) => {
     }
 
     const isSamePassword = await bcrypt.compare(new_password, user.password);
-
     if (isSamePassword) {
       return res.json({
         success: false,
@@ -321,13 +330,9 @@ export const reset_password = async (req, res) => {
     user.password = hashed_password;
     user.reset_otp = "";
     user.reset_otp_expiry = 0;
-
     await user.save();
 
-    return res.json({
-      success: true,
-      message: "Password reset successfully",
-    });
+    return res.json({ success: true, message: "Password reset successfully" });
   } catch (error) {
     return res.json({ success: false, message: error.message });
   }

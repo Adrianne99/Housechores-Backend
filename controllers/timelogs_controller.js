@@ -1,6 +1,7 @@
 import shift_model from "../models/shift_model.js";
 import timelog_model from "../models/timelog_model.js";
 import user_model from "../models/user_model.js";
+import { org_of } from "../utils/permissions.js";
 
 export const clock_in = async (req, res) => {
   try {
@@ -22,6 +23,7 @@ export const clock_in = async (req, res) => {
     const log = await timelog_model.create({
       employee,
       branch,
+      organization: org_of(req),
       clock_in: new Date(),
       date: today,
       hourly_rate: req.user.hourly_rate ?? 0,
@@ -80,7 +82,7 @@ export const get_all_timelogs = async (req, res) => {
   try {
     const { date, employee_id } = req.query;
 
-    const filter = {};
+    const filter = { organization: org_of(req) };
 
     if (date) filter.date = date;
     if (employee_id) filter.employee = employee_id;
@@ -101,7 +103,10 @@ export const manual_log = async (req, res) => {
   try {
     const { employee, date, clock_in, clock_out, notes } = req.body;
 
-    const specific_employee = await user_model.findById(employee);
+    const specific_employee = await user_model.findOne({
+      _id: employee,
+      organization: org_of(req),
+    });
 
     if (!specific_employee)
       return res
@@ -120,11 +125,12 @@ export const manual_log = async (req, res) => {
     );
     const log = await timelog_model.create({
       employee,
-      branch: emp.branch,
+      branch: specific_employee.branch,
+      organization: org_of(req),
       clock_in: clock_in_time,
       clock_out: clock_out_time,
       hours_worked,
-      hourly_rate: emp.hourly_rate ?? 0,
+      hourly_rate: specific_employee.hourly_rate ?? 0,
       computed_salary,
       date,
       is_manual: true,
@@ -144,8 +150,8 @@ export const update_hourly_rate = async (req, res) => {
     const { hourly_rate } = req.body;
 
     const user = await user_model
-      .findByIdAndUpdate(
-        id,
+      .findOneAndUpdate(
+        { _id: id, organization: org_of(req) },
         { hourly_rate: Number(hourly_rate) },
         { new: true },
       )

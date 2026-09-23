@@ -1,11 +1,12 @@
 import shift_model from "../models/shift_model.js";
 import timelog_model from "../models/timelog_model.js";
 import user_model from "../models/user_model.js";
+import { org_of } from "../utils/permissions.js";
 
 export const get_shift = async (req, res) => {
   try {
     const { start, end, date } = req.query;
-    const filter = {};
+    const filter = { organization: org_of(req) };
     if (date) filter.date = date;
     if (start && end) filter.date = { $gte: start, $lte: end };
     if (req.user.role === "branch_manager") {
@@ -54,7 +55,21 @@ export const create_shift = async (req, res) => {
         message: "End time cannot be the same as start time.",
       });
     }
-    const existing_shift = await shift_model.findOne({ employee, date });
+    // Both the employee and the branch must belong to this organization.
+    const employee_in_org = await user_model.findOne({
+      _id: employee,
+      organization: org_of(req),
+    });
+    if (!employee_in_org)
+      return res
+        .status(404)
+        .json({ success: false, message: "Employee not found." });
+
+    const existing_shift = await shift_model.findOne({
+      employee,
+      date,
+      organization: org_of(req),
+    });
     if (existing_shift)
       return res.status(409).json({
         success: false,
@@ -64,6 +79,7 @@ export const create_shift = async (req, res) => {
     const shift = await shift_model.create({
       employee,
       branch,
+      organization: org_of(req),
       date,
       start_time,
       end_time,
@@ -76,7 +92,7 @@ export const create_shift = async (req, res) => {
 
     return res.status(201).json({ success: true, shift });
   } catch (error) {
-    return res.statu(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -107,7 +123,11 @@ export const update_shift = async (req, res) => {
     }
 
     const shift = await shift_model
-      .findByIdAndUpdate(id, { start_time, end_time, hours }, { new: true })
+      .findOneAndUpdate(
+        { _id: id, organization: org_of(req) },
+        { start_time, end_time, hours },
+        { new: true },
+      )
       .populate("employee", "name role hourly_rate")
       .populate("branch", "name");
 
@@ -124,7 +144,10 @@ export const update_shift = async (req, res) => {
 
 export const delete_shift = async (req, res) => {
   try {
-    const shift = await shift_model.findByIdAndDelete(req.params.id);
+    const shift = await shift_model.findOneAndDelete({
+      _id: req.params.id,
+      organization: org_of(req),
+    });
     if (!shift)
       return res
         .status(404)

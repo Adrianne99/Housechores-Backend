@@ -12,6 +12,12 @@ const branch_inventory_schema = new mongoose.Schema(
       ref: "branches",
       required: true,
     },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: true,
+      index: true,
+    },
     stock: {
       current_stock: { type: Number, default: 0 },
       reorder_level: { type: Number, default: 0 },

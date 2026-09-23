@@ -5,11 +5,23 @@ const user_schema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true },
+    // ─── Multi-tenancy ──────────────────────────────────────────
+    // The organization (tenant) this user belongs to. For a root
+    // admin this equals their own _id; every staff member they create
+    // inherits the same value. All list queries are scoped by this so
+    // one account never sees another account's data.
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      default: null,
+      index: true,
+    },
     role: {
       type: String,
-      enum: ["owner", "branch_manager", "employee"],
+      enum: ["admin", "branch_manager", "employee"],
       default: "employee",
     },
+    is_active: { type: Boolean },
     branch: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "branches",

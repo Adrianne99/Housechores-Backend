@@ -12,9 +12,12 @@ import {
   delete_branch,
   get_single_branch,
   assign_branch,
+  branch_label,
 } from "../controllers/branch_controller.js";
 
 const branch_router = express.Router();
+
+branch_router.get("/:id", user_auth, branch_label);
 
 branch_router.post("/", user_auth, require_admin, create_branch);
 branch_router.get(

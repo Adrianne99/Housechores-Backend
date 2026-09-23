@@ -20,5 +20,14 @@
     "mongoose": "^9.0.1",
     "nodemailer": "^7.0.11",
     "nodemon": "^3.1.11"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adrianne99/Housechores-Backend.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/Adrianne99/Housechores-Backend/issues"
+  },
+  "homepage": "https://github.com/Adrianne99/Housechores-Backend#readme"
 }
